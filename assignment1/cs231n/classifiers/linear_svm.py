@@ -34,7 +34,7 @@ def svm_loss_naive(W, X, y, reg):
       margin = scores[j] - correct_class_score + 1 # note delta = 1
       if margin > 0:
         loss += margin
-        # For the incorrect datapoint, it has been computed once;
+        # for the incorrect datapoint, it has been computed once;
         dW[:, j] += X[i]
         # while for the correct datapoint, it has been computed X(margin>0) times
         dW[:, y[i]] += -X[i]
@@ -74,11 +74,23 @@ def svm_loss_vectorized(W, X, y, reg):
   # Implement a vectorized version of the structured SVM loss, storing the    #
   # result in loss.                                                           #
   #############################################################################
-  pass
+  num_train = X.shape[0]
+  scores = X.dot(W)
+  yi_mask = range(num_train), y
+  scores_yi = scores[yi_mask]
+  loss_each = scores - scores_yi.reshape((num_train, 1)) + 1
+
+  # the loss value of yi is zero
+  loss_each[yi_mask] = 0
+
+  # the min value of loss function is zero
+  loss_mask = loss_each <= 0
+  loss_each[loss_mask] = 0
+  
+  loss = np.sum(loss_each) / num_train
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
-
 
   #############################################################################
   # TODO:                                                                     #
@@ -89,7 +101,22 @@ def svm_loss_vectorized(W, X, y, reg):
   # to reuse some of the intermediate values that you used to compute the     #
   # loss.                                                                     #
   #############################################################################
-  pass
+  
+  # My previous solution, even slower than naive one!
+  # 
+  # dimension, num_classes = W.shape
+  # dWs = np.tile(X, (1, W.shape[1])).reshape((num_train, num_classes, dimension))
+  # dWs[loss_mask] = np.zeros((dimension,))
+  # gradient_yi = np.sum(dWs, axis=1)
+  # dWs[range(num_train), y] = - gradient_yi
+  # dW = (np.sum(dWs, axis=0) / num_train).T
+
+  # Faster solution
+  # computer dW count
+  dW_count = loss_each
+  dW_count[dW_count > 0] = 1
+  dW_count[yi_mask] = -np.sum(dW_count, axis=1)
+  dW = X.T.dot(dW_count) / num_train
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
