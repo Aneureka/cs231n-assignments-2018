@@ -58,7 +58,7 @@ def affine_backward(dout, cache):
     D = w.shape[0]
     dx = dout.dot(w.T).reshape(x.shape)
     dw = x.reshape((N, D)).T.dot(dout)
-    db = np.ones((1, N)).dot(dout)
+    db = np.ones((1, N)).dot(dout).flatten()
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################

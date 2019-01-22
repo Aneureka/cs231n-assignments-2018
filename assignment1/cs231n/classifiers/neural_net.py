@@ -102,7 +102,7 @@ class TwoLayerNet(object):
     mask_y = range(N), y
     scores /= np.sum(scores, axis=1).reshape(N, 1)
     loss = np.sum(-np.log(scores[mask_y])) / N
-    l2 = lambda x : np.sum(np.square(x))
+    l2 = lambda x : np.sum(x**2)
     loss += reg * (l2(W1) + l2(b1) + l2(W2) + l2(b2))
     #############################################################################
     #                              END OF YOUR CODE                             #
