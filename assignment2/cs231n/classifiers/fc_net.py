@@ -247,16 +247,17 @@ class FullyConnectedNet(object):
         # self.bn_params[1] to the forward pass for the second batch normalization #
         # layer, etc.                                                              #
         ############################################################################
-        # TODO add BN and dropout
         caches = []
         out_temp = X
         for i in range(self.num_layers - 1):
             if self.normalization is not None:
-                out_temp, cache_temp = affine_batchnorm_relu_forward(out_temp, self.params['W%d' % (i+1)], self.params['b%d' % (i+1)], self.params['gamma%d' % (i+1)], self.params['beta%d' % (i+1)], self.bn_params[i])
+                out_temp, cache_temp = affine_norm_relu_forward(out_temp, self.params['W%d' % (i+1)], self.params['b%d' % (i+1)], self.params['gamma%d' % (i+1)], self.params['beta%d' % (i+1)], self.bn_params[i], self.normalization)
             else:
                 out_temp, cache_temp = affine_relu_forward(out_temp, self.params['W%d' % (i+1)], self.params['b%d' % (i+1)])
+            if self.use_dropout:
+                out_temp, dropout_cache = dropout_forward(out_temp, self.dropout_param)
+                cache_temp = (*cache_temp, dropout_cache)
             caches.append(cache_temp)
-
         out_temp, cache_last = affine_forward(out_temp, self.params['W%d' % self.num_layers], self.params['b%d' % self.num_layers])
         caches.append(cache_last)
         scores = out_temp
@@ -282,14 +283,16 @@ class FullyConnectedNet(object):
         # automated tests, make sure that your L2 regularization includes a factor #
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
-        # TODO add BN and dropout
         loss, dout_temp = softmax_loss(scores, y)
         dout_temp, grads['W%d' % self.num_layers], grads['b%d' % self.num_layers] = affine_backward(dout_temp, caches.pop())
         for i in reversed(range(self.num_layers-1)):
+            cache_temp = caches.pop()
+            if self.use_dropout:
+                dout_temp = dropout_backward(dout_temp, cache_temp[-1])
             if self.normalization is not None:
-                dout_temp, grads['W%d' % (i+1)], grads['b%d' % (i+1)], grads['gamma%d' % (i+1)], grads['beta%d' % (i+1)] = affine_batchnorm_relu_backward(dout_temp, caches.pop())
+                dout_temp, grads['W%d' % (i+1)], grads['b%d' % (i+1)], grads['gamma%d' % (i+1)], grads['beta%d' % (i+1)] = affine_norm_relu_backward(dout_temp, cache_temp[:3], self.normalization)
             else:
-                dout_temp, grads['W%d' % (i+1)], grads['b%d' % (i+1)] = affine_relu_backward(dout_temp, caches.pop())
+                dout_temp, grads['W%d' % (i+1)], grads['b%d' % (i+1)] = affine_relu_backward(dout_temp, cache_temp[:2])
         # add regularization loss and grads
         l2 = lambda x : 0.5 * np.sum(x**2)
         loss += self.reg * np.sum([l2(self.params['W%d' % (i+1)]) for i in range(self.num_layers)])
@@ -302,18 +305,29 @@ class FullyConnectedNet(object):
         return loss, grads
 
 
-def affine_batchnorm_relu_forward(x, w, b, gamma, beta, bn_param):
+def affine_norm_relu_forward(x, w, b, gamma, beta, bn_param, norm_type):
     out1, fc_cache = affine_forward(x, w, b)
-    out2, bn_cache = batchnorm_forward(out1, gamma, beta, bn_param)
+    if norm_type == 'batchnorm':
+        out2, norm_cache = batchnorm_forward(out1, gamma, beta, bn_param)
+    elif norm_type == 'layernorm':
+        out2, norm_cache = layernorm_forward(out1, gamma, beta, bn_param)
+    else:
+        raise ValueError('Invalid norm type "%s"' % norm_type) 
     out, relu_cache = relu_forward(out2)
-    cache = (fc_cache, bn_cache, relu_cache)
+    cache = (fc_cache, norm_cache, relu_cache)
     return out, cache
 
 
-def affine_batchnorm_relu_backward(dout, cache):
-    fc_cache, bn_cache, relu_cache = cache
+def affine_norm_relu_backward(dout, cache, norm_type):
+    fc_cache, norm_cache, relu_cache = cache
     dout1 = relu_backward(dout, relu_cache)
-    dout2, dgamma, dbeta = batchnorm_backward_alt(dout1, bn_cache)
+    if norm_type == 'batchnorm':
+        dout2, dgamma, dbeta = batchnorm_backward_alt(dout1, norm_cache)
+    elif norm_type == 'layernorm':
+        dout2, dgamma, dbeta = layernorm_backward(dout1, norm_cache)
+    else:
+        raise ValueError('Invalid norm type "%s"' % norm_type)  
     dx, dw, db = affine_backward(dout2, fc_cache)
     return dx, dw, db, dgamma, dbeta
+
 
