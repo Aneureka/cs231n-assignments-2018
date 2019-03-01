@@ -9,7 +9,7 @@ def affine_relu_forward(x, w, b):
 
     Inputs:
     - x: Input to the affine layer
-    - w, b: Weights for the affine layer
+    - w, b: Weights for the affine layeTTr
 
     Returns a tuple of:
     - out: Output from the ReLU
