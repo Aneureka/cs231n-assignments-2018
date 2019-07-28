@@ -126,7 +126,7 @@ batch normalization cannot be applied on small batch!
 
 learning rate is almost the most important one among the hyperparameters
 
-不要一次性调整超过4个hyperparameters
+不要一次性调整超过 4 个 hyperparameters
 
 
 

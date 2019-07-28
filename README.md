@@ -8,7 +8,7 @@ For sharing my naive ideas and being ready for different voice.
 
 🙋 assignment #1
 
-🙅 assignment #2
+🙋 assignment #2
 
 🙅 assignment #3
 
